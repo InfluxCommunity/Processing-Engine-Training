@@ -1,4 +1,4 @@
-# Processing Engine 101
+# Processing Engine Training
 
 This guide provides a foundational understanding of the InfluxDB 3 Processing Engine. Refer to the [official documentation](https://docs.influxdata.com) and the community plugins [repository](https://github.com/influxdata/influxdb3_plugins) to discover more advanced use cases and capabilities.
 
