@@ -57,7 +57,7 @@ It is an embedded Python VM that runs inside your InfluxDB 3 database and lets y
 |  Set Trigger(s) |------>| Executes Plugin |
 | (Data Write,    |       |  (Python Code)  |
 |  Scheduled,     |       |                 |
-| HTTP Request)   |       |                 |
+|  HTTP Request)  |       |                 |
 +-----------------+       +-----------------+
          |                |       |
          |                |       |  Read/Write via API
