@@ -14,7 +14,7 @@ It is an embedded Python VM that runs inside your InfluxDB 3 database and lets y
 - Create API endpoints that execute Python code
 - Maintain state between executions with an in-memory cache
 
-### Setup
+### Setup (Start InfluxDB with Processing engine)
 
 Processing Engine executes python script also known as 'plugin' inside a python virtual enviornment. These plugins can be located either in a local directory on your machine or they can be in a public GitHub repository. To configure the location of the plugins, you need to provide the path as an argument at the time of starting InfluxDB 3 as follows:
 
@@ -37,6 +37,17 @@ influxdb3 serve \
 #### Install Python dependencies (optional)
 
 InfluxDB 3 creates a virtual enviornment for running python processing engine plugins. Those plugins are often dependent on python packages such as those from PyPy. They can be installed using influxdb3 cli `influxdb3 install package pandas`
+
+### Create a Token
+
+To run most of the `influxdb3` commands, it needs a token argument. An admin token grants access to all actions 0 CLI commands and API endpoints. To create the token execute the following command:
+
+```shell
+influxdb3 create token --admin
+```
+
+> [!IMPORTANT]
+> Remember, tokens give access to your InfluxDB. It is recommended to secure your token string as it is not saved within the database thus can't be retreived if lost. You can save it as a local **INFLUXDB3_AUTH_TOKEN** enviornment variable or in a keystore.
 
 ### Plugin & Triggers
 
