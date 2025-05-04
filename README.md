@@ -152,7 +152,7 @@ InfluxDB 3 provides a virtual enviornment for running python processing engine p
 
 This trigger executes your plugin whenever data is written to specified tables and the Write-Ahead Log (WAL) is flushed to the object store (typically every second).
 
-![wal-flush-diagram](WAL-Flush-Diagram.png)
+<img src="WAL-Flush-Plugin-Diagram.png" alt="wal-flush-plugin-diagram" width="400">
 
 1.1 Create a WAL-Flush trigger that runs when data is written to any table. It can also be modified to run on a specific table.
 ```shell
@@ -211,7 +211,7 @@ You should see a new data point confirming that the WAL Flush trigger is working
 
 #### 2. Schedule plugin
 
-<img src="Schedule-Diagram.png" alt="schedule-diagram" width="50">
+<img src="Schedule-Plugin-Diagram.png" alt="schedule-plugin-diagram" width="400">
 
 2.1 Create a Scchedule trigger that runs on any particular schedule.
 ```shell
@@ -299,7 +299,7 @@ Extend your plugin's fuctionality using Python APIs:
 - Logging: Use influxdb3_local.info(), influxdb3_local.warn(), and influxdb3_local.error() for logging messages.
 - In-Memory Cache: Use influxdb3_local.cache to store and retrieve data between plugin executions. There are two types of cache available
 
-![cache-diagram](Cache-Diagram.png)
+<img src="Cache-Diagram.png" alt="Caching-diagram" width="400">
 
 ### Using Community created Plugin
 
