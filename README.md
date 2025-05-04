@@ -263,4 +263,12 @@ influxdb3 create trigger \
   system_metrics
 ```
 
+### Get Involved and Contribute!
+
+We encourage you to contribute to the InfluxDB community and help make the Processing Engine even better!
+
+**Report Issues**: If you encounter any problems or have questions, please open an issue on the GitHub repository.
+**Share Your Plugins**: Create your own InfluxDB 3 plugins and share them with the community by contributing to the InfluxData Plugins Repository.
+**Join the Community**: Connect with other InfluxDB users and developers through our community channels on [Discord](https://discord.com/invite/vZe2w2Ds8B), [Slack](https://influxdata.com/slack) and website [forum](https://community.influxdata.com)
+**Star the Repository**: If you found this valuable, please star this repository.
 
