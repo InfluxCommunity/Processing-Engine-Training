@@ -19,19 +19,67 @@ This guide provides a foundational training of the InfluxDB 3 Processing Engine 
 4. **Verify installation**: Open terminal window and run `influxdb3` command without error to ensure it installed successfully.
 
 
-## Processing engine
+## Processing Engine
 
 It is an embedded Python VM that runs inside your InfluxDB 3 database and lets you:
-- Process data as it’s written to the database
-- Run code on a schedule
-- Create API endpoints that execute Python code
-- Maintain state between executions with an in-memory cache
+- Process data as it’s written to the database.
+- Run code on a schedule.
+- Create API endpoints that execute Python code.
+- Maintain state between executions with an in-memory cache.
+
+## Plugins & Triggers
+
+- **Plugins**: Python scripts executed by InfluxDB, containing callback functions defined for specific tasks.
+
+- **Triggers**: Mechanisms that activate plugins based on specific conditions or schedules.
+   - Configure triggers with arguments (--trigger-arguments) to control plugin behavior.
+   - Multiple triggers can run plugins simultaneously, synchronously or asynchronously.
+
+### Workflow
+
++-----------------+
+|   Data Source   |
+| (Telegraf, CSV, |
+|  CLI, API etc)  |
++-----------------+
+         |
+         | Write Data
+         V
++-----------------+
+|   InfluxDB 3    |
+| Core/Enterprise |
++-----------------+
+         |
+         | WAL Flush
+         V
++-----------------+       +-----------------+
+|  Set Trigger(s) |------>| Executes Plugin |
+| (Data Write,    |       |  (Python Code)  |
+|  Scheduled,     |       |                 |
+| HTTP Request)   |       |                 |
++-----------------+       +-----------------+
+         |                |       |
+         |                |       |  Read/Write via API
+         |                |       V
+         |                | +-----------------+
+         |                | |  InfluxDB 3     |
+         |                | |  Data Storage   |
+         |                | | (Tables, etc.)  |
+         |                | +-----------------+
+         |                |       |
+         |                |       |  Optional APIs
+         |                |       V
+         |                | +---------------------------------------+
+         |                | |In-Memory Cache, Write, Query, Log etc |
+         |                | |                                       |
+         |                | +---------------------------------------+
+         +----------------+
 
 ### Setup
 
 To enable the Processing Engine, you need to tell InfluxDB where to find your Python plugin files. Use the `--plugin-dir` option when starting the server.
 
-1. Create a Plugin directory if it doesn't exist where python scripts also referred as plugins will reside. Optionally, you reference plugin from a GitHub repository in which case you can omit directory creation and start influxdb3 server without providing it plugin folder path.
+1. Create a Plugin directory if it doesn't exist where python scripts also referred as plugins will reside. Optionally, you also reference plugin from a GitHub repository in which case you can omit directory creation and start InfluxDB 3 without providing it plugin folder path.
    
 ```shell
 mkdir plugins
@@ -87,8 +135,7 @@ influxdb3 query \
   --database my_awesome_db \
   --token YOUR_TOKEN \
   "SELECT * FROM cpu"
-```
-   
+``` 
 
 ### Plugin & Triggers
 
