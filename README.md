@@ -108,7 +108,7 @@ influxdb3 create trigger \
   hello_wal_trigger                   # Name of the trigger
 ```
 
-1.2 Create a plugin for WAL-Flush trigger. [Sample file](hello-wal.py')
+1.2 Create a plugin for WAL-Flush trigger. [Sample file](hello-wal.py)
 
 ```python
 from influxdb3 import LineBuilder
@@ -168,7 +168,7 @@ influxdb3 create trigger \
   hello_schedule_trigger                  # Name of the trigger
 ```
 
-2.2 Create a plugin for WAL-Flush trigger. [Sample file](hello-schedule.py')
+2.2 Create a plugin for WAL-Flush trigger. [Sample file](hello-schedule.py)
 
 ```python
 """
@@ -203,7 +203,7 @@ influxdb3 create trigger \
   hello_http_trigger                      # Name of the trigger
 ```
 
-3.2 Create a plugin to handle HTTP requests. [Sample file](hello-http.py')
+3.2 Create a plugin to handle HTTP requests. [Sample file](hello-http.py)
 
 ```python
 """
