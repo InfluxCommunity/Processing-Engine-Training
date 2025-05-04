@@ -37,8 +37,17 @@ To enable the Processing Engine, you need to tell InfluxDB where to find your Py
 mkdir plugins
 ```
 
-2. Start InfluxDB 3 with Plugin Support if using plugins from local directory
+2. Stop and Start InfluxDB 3 with Plugin Support if using plugins from local directory
 
+2.1 Stop InfluxDB3
+
+If InfluxDB 3 is running in the foreground, you can usually stop it by pressing `Ctrl+C` otherwise in a new terminal window execute the following commands:
+```shell
+ps aux | grep influxdb3  # Find the process ID (PID)
+kill -9 <PID>            # Replace <PID> with the actual process ID
+```
+
+2.2 Start InfluxDB with Processing Engine
 ```shell
 influxdb3 serve \
   --node-id node0 \                       # Node identifier
@@ -48,10 +57,9 @@ influxdb3 serve \
 > [!TIP]
 Omit `--plugin-dir` if using plugins directly from GitHub
 
-3. Create a Token using the cli
+3. Create a Token using the CLI
 
 Most `influxdb3` commands require an authentication token. Create an admin token using the following command and save it somewhere securely:
-
 ```shell
 influxdb3 create token --admin
 ```
@@ -60,12 +68,11 @@ influxdb3 create token --admin
 > Remember, tokens give full access to InfluxDB. It is recommended to secure your token string as it is not saved within the database thus can't be retreived if lost. You can save it as a local **INFLUXDB3_AUTH_TOKEN** enviornment variable or in a keystore.
 
 4. Create Database using the cli (optionally it is created automatically when line protocol data is first written to it)
-
 ```shell
 influxdb3 create database my_awesome_db
 ```
 
-5. Write Data using the cli
+5. Write Data using the CLI
 ```shell
 influxdb3 write \
   --database my_awesome_db \
@@ -74,8 +81,7 @@ influxdb3 write \
   'cpu,host=server01,region=us-west value=0.64 1641024000000000000'
 ```
 
-6. Query Data using the cli
-
+6. Query Data using the CLI
 ```shell
 influxdb3 query \
   --database my_awesome_db \
@@ -99,7 +105,6 @@ InfluxDB 3 provides a virtual enviornment for running python processing engine p
 This trigger executes your plugin whenever data is written to specified tables and the Write-Ahead Log (WAL) is flushed to the object store (typically every second).
 
 1.1 Create a WAL-Flush trigger that runs when data is written to any table. It can also be modified to run on a specific table.
-
 ```shell
 influxdb3 create trigger \
   --trigger-spec "all_tables" \       # Process all tables in the database
@@ -109,7 +114,6 @@ influxdb3 create trigger \
 ```
 
 1.2 Create a plugin for WAL-Flush trigger. [Sample file](hello-wal.py)
-
 ```python
 from influxdb3 import LineBuilder
 """
@@ -139,7 +143,6 @@ def process_writes(influxdb3_local, table_batches, args=None):
 1.3 Test WAL-Flush plugin
 
 Run the following command to write sample data.
-
 ```shell
 influxdb3 write \
   --database my_awesome_db \
@@ -159,7 +162,6 @@ You should see a new data point confirming that the WAL Flush trigger is working
 #### 2. Schedule plugin
 
 2.1 Create a Scchedule trigger that runs on any particular schedule:
-
 ```shell
 influxdb3 create trigger \
   --trigger-spec "every:1m" \             # Run every minute (can use cron syntax too)
@@ -169,7 +171,6 @@ influxdb3 create trigger \
 ```
 
 2.2 Create a plugin for WAL-Flush trigger. [Sample file](hello-schedule.py)
-
 ```python
 """
 Entry point for scheduled triggers that is called based on defined schedule.
@@ -193,7 +194,6 @@ def process_scheduled_call(influxdb3_local, call_time, args=None):
 #### 3. HTTP Request plugin
 
 3.1 Create a HTTP trigger that responds to HTTP requests such as a webhook.
-
 ```shell
 # Create a trigger that responds to HTTP requests
 influxdb3 create trigger \
@@ -204,7 +204,6 @@ influxdb3 create trigger \
 ```
 
 3.2 Create a plugin to handle HTTP requests. [Sample file](hello-http.py)
-
 ```python
 """
 Entry point for HTTP request triggers that is called when requests hit custom endpoint.
@@ -234,7 +233,6 @@ def process_request(influxdb3_local, query_parameters, request_headers, request_
 3.3 Test the HTTP Request plugin
 
 Send a GET or POST request to your custom endpoint such as http://localhost:8181/api/v3/engine/webhook
-
 ```shell
 curl http://localhost:8181/api/v3/engine/webhook -X POST -H "Content-Type: application/json" -d '{"message": "Hello from webhook!"}'
 ```
@@ -254,7 +252,6 @@ Extend your plugin's fuctionality using Python APIs:
 You can directly use plugins from the official [InfluxData Plugins GitHub repository](https://github.com/influxdata/influxdb3_plugins) or other public repositories using the gh: prefix in the `--plugin-filename argument` 
 
 Example - using sample system_metrics schedule plugin
-
 ```shell
 influxdb3 create trigger \
   --trigger-spec "every:1m" \
