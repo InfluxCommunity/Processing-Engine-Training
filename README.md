@@ -7,6 +7,8 @@ This guide provides a foundational training of the InfluxDB 3 Processing Engine 
 1. **Python**: Make sure you have Python version 3.x on your system.
 2. **Code Editor**: Your favorite code editor.
 3. **Install InfluxDB 3**: Either InfluxDB 3 Core or Enterprise.
+   - You can install it as a `Docker Image` or directly using `Simple Download` option.
+   - When promoted **Start InfluxDB Now? Type 'n'** as we will start it later.
 
    InfluxDB 3 Core
    ```shell
@@ -16,8 +18,7 @@ This guide provides a foundational training of the InfluxDB 3 Processing Engine 
    ```shell
    curl -O https://www.influxdata.com/d/install_influxdb3.sh && sh install_influxdb3.sh enterprise
    ```
-4. **Verify installation**: Open terminal window and run `influxdb3` command without error to ensure it installed successfully.
-
+4. **Verify installation**: Open terminal window and run `influxdb3 --version` command without error to the latest version installed successfully.
 
 ## Processing Engine
 
@@ -27,7 +28,7 @@ It is an embedded Python VM that runs inside your InfluxDB 3 database and lets y
 - Create API endpoints that execute Python code.
 - Maintain state between executions with an in-memory cache.
 
-## Plugins & Triggers
+### Plugins & Triggers
 
 - **Plugins**: Python scripts executed by InfluxDB, containing callback functions defined for specific tasks.
 
@@ -80,31 +81,34 @@ It is an embedded Python VM that runs inside your InfluxDB 3 database and lets y
 
 To enable the Processing Engine, you need to tell InfluxDB where to find your Python plugin files. Use the `--plugin-dir` option when starting the server.
 
-1. Create a Plugin directory if it doesn't exist where python scripts also referred as plugins will reside. Optionally, you also reference plugin from a GitHub repository in which case you can omit directory creation and start InfluxDB 3 without providing it plugin folder path.
+1. Create a plugin directory anywhere you prefer as this is where plugin code will reside. Optionally, you also reference plugin from a GitHub repository in which case you can omit directory creation and start InfluxDB 3 without providing it plugin folder path.
    
 ```shell
-mkdir plugins
+cd ~
+mkdir influxdb3-plugins
 ```
 
 2. Stop and Start InfluxDB 3 with Plugin Support if using plugins from local directory
 
-2.1 Stop InfluxDB3
 
-If InfluxDB 3 is running in the foreground, you can usually stop it by pressing `Ctrl+C` otherwise in a new terminal window execute the following commands:
-```shell
-ps aux | grep influxdb3  # Find the process ID (PID)
-kill -9 <PID>            # Replace <PID> with the actual process ID
-```
+2.1 Start InfluxDB with Processing Engine
 
-2.2 Start InfluxDB with Processing Engine
+Arguments:
+
+- `--node-id`: Identifier for your InfluxDB node.
+- `--object-store`: Type of object storage (e.g., memory, file, remote such as Amazon S3).
+- `--data-dir`: Location of the directory where file baed object storage will reside.
+- `--plugin-dir`: Directory containing local Python plugin scripts. Omit this argument if using plugins directly from GitHub.
+
+**Example command**
 ```shell
 influxdb3 serve \
-  --node-id node0 \                       # Node identifier
-  --object-store file \                   # Object storage type, here we chose file but you can chose memory or remote object store like S3
-  --plugin-dir ~/.influxdb3/plugins       # Directory for your local python plugins
+  --node-id node0 \
+  --object-store file \
+  --data-dir ~/.influxdb/data
+  --plugin-dir ~/influxdb3-plugins
 ```
-> [!TIP]
-Omit `--plugin-dir` if using plugins directly from GitHub
+Upon running hte command, InfluxDB 3 should start on localhost:8181 (default) and start printing logs in the terminal window without any error.
 
 3. Create a Token using the CLI
 
@@ -116,16 +120,17 @@ influxdb3 create token --admin
 > [!IMPORTANT]
 > Remember, tokens give full access to InfluxDB. It is recommended to secure your token string as it is not saved within the database thus can't be retreived if lost. You can save it as a local **INFLUXDB3_AUTH_TOKEN** enviornment variable or in a keystore.
 
-4. Create Database using the cli (optionally it is created automatically when line protocol data is first written to it)
+4. Create Database & Verfify it using the cli. It can also be created automatically when line protocol data is first written to it.
 ```shell
-influxdb3 create database my_awesome_db
+influxdb3 create database my_awesome_db --token "YOUR_TOKEN_STRING"
+influxdb3 show databases --token "YOUR_TOKEN_STRING"
 ```
 
 5. Write Data using the CLI
 ```shell
 influxdb3 write \
   --database my_awesome_db \
-  --token YOUR_TOKEN \
+  --token YOUR_TOKEN_STRING \
   --precision ns \
   'cpu,host=server01,region=us-west value=0.64 1641024000000000000'
 ```
@@ -134,7 +139,7 @@ influxdb3 write \
 ```shell
 influxdb3 query \
   --database my_awesome_db \
-  --token YOUR_TOKEN \
+  --token YOUR_TOKEN_STRING \
   "SELECT * FROM cpu"
 ``` 
 
@@ -144,7 +149,7 @@ A plugin is a Python file containing a callback function with a specific signatu
 
 #### Install Python dependencies (optional)
 
-InfluxDB 3 provides a virtual enviornment for running python processing engine plugins. Those plugins are often dependent on python packages such as those from PyPy. They can be installed using influxdb3 cli for example `influxdb3 install package pandas` to install pandas package.
+InfluxDB 3 provides a virtual enviornment for running python processing engine plugins. Those plugins are often dependent on python packages such as those from PyPy. They can be installed using influxdb3 cli for example `influxdb3 install package pandas --token YOUR_TOKEN_STRING` to install pandas package.
 
 **There are three main trigger types**:
 
@@ -155,15 +160,34 @@ This trigger executes your plugin whenever data is written to specified tables a
 <img src="WAL-Flush-Plugin-Diagram.png" alt="wal-flush-plugin-diagram" width="400">
 
 1.1 Create a WAL-Flush trigger that runs when data is written to any table. It can also be modified to run on a specific table.
+
+Arguments:
+- `--trigger-spec`: Specifies when the trigger activates (e.g., all_tables).
+- `--plugin-filename`: Name of the Python plugin file.
+- `--database`: Database to monitor.
+- '--token': YOUR_TOKEN_STRING
+- `name of the trigger`
+
+
 ```shell
 influxdb3 create trigger \
-  --trigger-spec "all_tables" \       # Process all tables in the database
-  --plugin-filename "hello-wal.py" \  # Python plugin file in your plugin directory
-  --database my_awesome_db \          # Database to monitor
-  hello_wal_trigger                   # Name of the trigger
+  --trigger-spec "all_tables" \
+  --plugin-filename "hello-wal.py" \
+  --database my_awesome_db \
+  --token YOUR_TOKEN_STRING
+  hello_wal_trigger 
 ```
 
-1.2 Create a plugin for WAL-Flush trigger. [Sample file](hello-wal.py)
+1.2 Create a plugin for WAL-Flush trigger. 
+
+Create Python script 'hello-wal.py' in your plugins directory.
+
+```shell
+cd ~/influxdb3-plugins
+touch hello-wal.py
+```
+Open code editor and add the following sample code, also available [here](hello-wal.py).
+
 ```python
 from influxdb3 import LineBuilder
 """
@@ -300,6 +324,14 @@ Extend your plugin's fuctionality using Python APIs:
 - In-Memory Cache: Use influxdb3_local.cache to store and retrieve data between plugin executions. There are two types of cache available individual trigger cache and shared trigger cache.
 
 <img src="Cache-Diagram.png" alt="Caching-diagram" width="400">
+
+4.  Stop InfluxDB3
+
+Last step is to stop InfluxDB3 if you'd like. If InfluxDB 3 is running in the foreground, you can usually stop it by pressing `Ctrl+C` otherwise in a new terminal window execute the following commands to find and kill the InfluxDB 3 server:
+```shell
+ps aux | grep influxdb3
+kill -9 <PID>
+```
 
 ### Using Community created Plugin
 
