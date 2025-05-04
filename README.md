@@ -6,7 +6,7 @@ This guide provides a foundational training of the InfluxDB 3 Processing Engine 
 
 1. **Python**: Make sure you have Python version 3.x on your system.
 2. **Code Editor**: Your favorite code editor.
-3. **Install InfluxDB 3** `
+3. **Install InfluxDB 3**: Either InfluxDB 3 Core or Enterprise.
 
    InfluxDB 3 Core
    ```shell
