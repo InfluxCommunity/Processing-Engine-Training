@@ -37,6 +37,7 @@ It is an embedded Python VM that runs inside your InfluxDB 3 database and lets y
 
 ### Workflow
 
+```ascii
 +-----------------+
 |   Data Source   |
 | (Telegraf, CSV, |
@@ -74,7 +75,7 @@ It is an embedded Python VM that runs inside your InfluxDB 3 database and lets y
          |                | |                                       |
          |                | +---------------------------------------+
          +----------------+
-
+```
 ### Setup
 
 To enable the Processing Engine, you need to tell InfluxDB where to find your Python plugin files. Use the `--plugin-dir` option when starting the server.
