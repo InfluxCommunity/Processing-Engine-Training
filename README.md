@@ -37,7 +37,7 @@ It is an embedded Python VM that runs inside your InfluxDB 3 database and lets y
 
 ### Workflow
 
-```ascii
+```text
 +-----------------+
 |   Data Source   |
 | (Telegraf, CSV, |
