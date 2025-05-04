@@ -297,7 +297,7 @@ Extend your plugin's fuctionality using Python APIs:
 - Writing Data: Use influxdb3_local.write(line_protocol_string) or the LineBuilder class.
 - Querying Data: Use influxdb3_local.query(sql_query, params=None).
 - Logging: Use influxdb3_local.info(), influxdb3_local.warn(), and influxdb3_local.error() for logging messages.
-- In-Memory Cache: Use influxdb3_local.cache to store and retrieve data between plugin executions. There are two types of cache available
+- In-Memory Cache: Use influxdb3_local.cache to store and retrieve data between plugin executions. There are two types of cache available individual trigger cache and shared trigger cache.
 
 <img src="Cache-Diagram.png" alt="Caching-diagram" width="400">
 
