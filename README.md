@@ -161,7 +161,7 @@ This trigger executes your plugin whenever data is written to specified tables a
 
 1.1 Create a plugin for WAL-Flush trigger. 
 
-Create Python script 'hello-wal.py' in your plugins directory.
+**Create Python script 'hello-wal.py' in your plugins directory that you provided the path for when starting InfluxDB 3.**
 
 ```shell
 cd ~/influxdb3-plugins
