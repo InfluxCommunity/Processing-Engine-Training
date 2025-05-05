@@ -145,7 +145,7 @@ influxdb3 query \
 
 ### Plugin & Triggers
 
-A plugin is a Python file containing a callback function with a specific signature that corresponds to the trigger type. The trigger defines and configures the plugin including providing any optional information using `--trigger-arguments` option. One or more trigger can be setup to run simultaneously either synchnorously (default behavior) or asynchnorously.
+A plugin is a Python file containing a callback function with a specific signature that corresponds to the trigger type. The trigger defines and configures the plugin including providing any optional information using `--trigger-arguments` option. One or more trigger can be setup to run simultaneously either synchnorously (default behavior) or asynchnorously. Triggers can also be disabled or deleted.
 
 #### Install Python dependencies (optional)
 
@@ -155,30 +155,11 @@ InfluxDB 3 provides a virtual enviornment for running python processing engine p
 
 #### 1. WAL-Flush
 
-This trigger executes your plugin whenever data is written to specified tables and the Write-Ahead Log (WAL) is flushed to the object store (typically every second).
+This trigger executes your plugin whenever data is written to specified tables and the Write-Ahead Log (WAL) is flushed to the object store (typically every second). Common use cases are: Real time data transformation, validation, threshold based alerting etc.
 
 <img src="WAL-Flush-Plugin-Diagram.png" alt="wal-flush-plugin-diagram" width="400">
 
-1.1 Create a WAL-Flush trigger that runs when data is written to any table. It can also be modified to run on a specific table.
-
-Arguments:
-- `--trigger-spec`: Specifies when the trigger activates (e.g., all_tables).
-- `--plugin-filename`: Name of the Python plugin file.
-- `--database`: Database to monitor.
-- '--token': YOUR_TOKEN_STRING
-- `name of the trigger`
-
-
-```shell
-influxdb3 create trigger \
-  --trigger-spec "all_tables" \
-  --plugin-filename "hello-wal.py" \
-  --database my_awesome_db \
-  --token YOUR_TOKEN_STRING
-  hello_wal_trigger 
-```
-
-1.2 Create a plugin for WAL-Flush trigger. 
+1.1 Create a plugin for WAL-Flush trigger. 
 
 Create Python script 'hello-wal.py' in your plugins directory.
 
@@ -189,29 +170,80 @@ touch hello-wal.py
 Open code editor and add the following sample code, also available [here](hello-wal.py).
 
 ```python
-from influxdb3 import LineBuilder
+import datetime
 """
-Entry point for WAL flush triggers that is called when data is written to the database.
+Entry point for WAL flush triggers that does basic data processing and it to a new table.
 Arguments: influxdb3_local (API object), table_batches (data written), args (optional trigger arguments).
 """
 def process_writes(influxdb3_local, table_batches, args=None):
     # Log that the plugin was triggered
-    influxdb3_local.info("Hello from WAL plugin!")
+    influxdb3_local.info("Processing data with enhanced WAL plugin!")
     
     # Process each table's data
     for table_batch in table_batches:
         table_name = table_batch["table_name"]
         rows = table_batch["rows"]
-
+        
+        # Skip processing our own output table to avoid recursion
+        if table_name == "data_insights":
+            continue
+            
         # Log information about the data
-        influxdb3_local.info(f"Received {len(rows)} rows from table {table_name}")
-
-        # Write a summary record back to the database
-        line = LineBuilder("hello_summary")
-        line.tag("source", "wal_plugin")
-        line.tag("table", table_name)
+        influxdb3_local.info(f"Processing {len(rows)} rows from table {table_name}")
+        
+        # Calculate some basic statistics if we have numeric fields
+        total_values = 0
+        max_value = float('-inf')
+        min_value = float('inf')
+        has_numeric = False
+        
+        for row in rows:
+            # Look for numeric fields we can analyze
+            for field_name, value in row.items():
+                if isinstance(value, (int, float)) and field_name != "time":
+                    has_numeric = True
+                    total_values += value
+                    max_value = max(max_value, value)
+                    min_value = min(min_value, value)
+        
+        # Write insights to a dedicated table
+        line = LineBuilder("data_insights")
+        line.tag("source_table", table_name)
         line.int64_field("row_count", len(rows))
+        
+        # Add statistics if we found numeric values
+        if has_numeric:
+            line.float64_field("max_value", max_value)
+            line.float64_field("min_value", min_value)
+            if len(rows) > 0:
+                line.float64_field("avg_value", total_values / len(rows))
+        
+        # Add a timestamp field showing when this processing occurred
+        line.string_field("processed_at", datetime.datetime.utcnow().isoformat())
+        
+        # Write the insights back to the database
         influxdb3_local.write(line)
+        
+        # Log completion
+        influxdb3_local.info(f"Generated insights for {table_name}")
+```
+
+1.2 Create a WAL-Flush trigger that runs when data is written to any table. This simple plugin, processed the data and saves that in a new table in the same database.
+
+Arguments:
+- `--trigger-spec`: Specifies for which table the trigger activates (e.g. specific table or on all tables).
+- `--plugin-filename`: Name of the Python plugin file.
+- `--database`: Database to use.
+- '--token': YOUR_TOKEN_STRING
+- `NAME_OF_TRIGGER`
+
+```shell
+influxdb3 create trigger \
+  --trigger-spec "all_tables" \
+  --plugin-filename "hello-wal.py" \
+  --database my_awesome_db \
+  --token YOUR_TOKEN_STRING
+  hello_wal_trigger 
 ```
 
 1.3 Test WAL-Flush plugin
@@ -220,66 +252,90 @@ Run the following command to write sample data.
 ```shell
 influxdb3 write \
   --database my_awesome_db \
-  --table test_data \
-  --field value=123 \
-  --tag tag1=value1
+  --token YOUR_TOKEN_STRING \
+  'cpu,cpu=cpu0,host=server01 usage_idle=65.7,usage_user=25.3,usage_system=8.2,usage_iowait=0.8
+   cpu,cpu=cpu1,host=server01 usage_idle=70.1,usage_user=20.5,usage_system=8.6,usage_iowait=0.8'
 ```
 
 Verify the following:
 
-**InfluxDB Server Logs**: You should see the "Hello from WAL plugin!" message, and a message indicating the number of rows processed.
+- **InfluxDB Server Logs**: You should see the "Hello from WAL plugin!" message, and a message indicating the number of rows processed
+- **Table - data_insights **: Query the newly created 'data_insights' table in your database to see the processed data.
 
-**Table - hello_summary **: Query the hello_summary table in your database `influxdb3 query --database my_awesome_db 'SELECT * FROM hello_summary'`
-
-You should see a new data point confirming that the WAL Flush trigger is working correctly and your plugin is processing the data written to InfluxDB.
+```shell
+influxdb3 query \
+  --database my_awesome_db \
+  --token YOUR_TOKEN_STRING \
+  "SELECT *, tz(time, 'America/Los_Angeles') AS local_time FROM data_insights" 
+```
 
 #### 2. Schedule plugin
 
+Scheule plugin runs at a given schedule defined in the `trigger-spec`. Common use cases are: Periodic data aggregation, Deadman alert, Health monitoring, Scheduled reporting etc.
+
 <img src="Schedule-Plugin-Diagram.png" alt="schedule-plugin-diagram" width="400">
 
-2.1 Create a Scchedule trigger that runs on any particular schedule.
-```shell
-influxdb3 create trigger \
-  --trigger-spec "every:1m" \             # Run every minute (can use cron syntax too)
-  --plugin-filename "hello-schedule.py" \ # Python plugin file
-  --database my_awesome_db \                # Database to use
-  hello_schedule_trigger                  # Name of the trigger
-```
-
-2.2 Create a plugin for WAL-Flush trigger. [Sample file](hello-schedule.py)
+2.1 Create a plugin for WAL-Flush trigger. [Sample file](hello-schedule.py)
 ```python
 """
-Entry point for scheduled triggers that is called based on defined schedule.
+Entry point for scheduled triggers that is called based on defined schedule. It logs a message and writes to the scheduler_heartbeat table.
 Arguments: influxdb3_local (API object), call_time (trigger time), args (optional trigger arguments).
 """
 def process_scheduled_call(influxdb3_local, call_time, args=None):
     # Log that the plugin was triggered
     influxdb3_local.info(f"Hello from scheduled plugin! Called at {call_time}")
     
+    # Log a dummy alert
+    influxdb3_local.info("ALERT: This is a dummy alert from the scheduler plugin!")
+    
     # Query some data
-    results = influxdb3_local.query("SELECT count(*) FROM hello_summary")
+    results = influxdb3_local.query("SELECT count(*) FROM data_insights")
     
     # Write a heartbeat record
     line = LineBuilder("scheduler_heartbeat")
     line.tag("source", "schedule_plugin")
     line.string_field("status", "running")
-    line.time_ns(int(call_time * 1e9))  # Convert to nanoseconds
+    line.string_field("alert_type", "dummy_alert")
+    
     influxdb3_local.write(line)
 ```
 
-#### 3. HTTP Request plugin
+2.2 Create a Schedule trigger that runs on any particular schedule.
 
-3.1 Create a HTTP trigger that responds to HTTP requests such as a webhook.
+Arguments:
+- `--trigger-spec`: Specifies how often trigger activates (e.g. Run every minute, you can use cron syntax too).
+- `--plugin-filename`: Name of the Python plugin file.
+- `--database`: Database to use.
+- '--token': YOUR_TOKEN_STRING
+- `NAME_OF_TRIGGER`
+  
 ```shell
-# Create a trigger that responds to HTTP requests
 influxdb3 create trigger \
-  --trigger-spec "request:hello" \        # Create endpoint at /api/v3/engine/hello
-  --plugin-filename "hello-http.py" \     # Python plugin file
-  --database my_awesome_db \              # Database to use
-  hello_http_trigger                      # Name of the trigger
+  --trigger-spec "every:10s" \
+  --plugin-filename "hello-schedule.py" \
+  --database my_awesome_db \
+  --token YOUR_TOKEN_STRING \
+  hello_schedule_trigger
 ```
 
-3.2 Create a plugin to handle HTTP requests. [Sample file](hello-http.py)
+2.3 Test the plugin
+
+Run the following command to query test data written to the new data at given interval.
+
+```shell
+influxdb3 query \
+  --database my_awesome_db \
+  --token YOUR_TOKEN_STRING \
+  --language sql \
+  "SELECT *, tz(time, 'America/Los_Angeles') AS local_time FROM scheduler_heartbeat ORDER BY time DESC LIMIT 10"
+```
+Verify the new records were added at the given schedule (e.g. 10 seconds).
+
+#### 3. HTTP Request plugin
+
+You can create custom endpoint to respond to HTTP Requests coming from the web. Common use cases are creating webhook, On-demand processing, custom API to handle web interactions over GET/POST and returns any particual format to the client.
+
+3.1 Create a plugin to handle HTTP requests. [Sample file](hello-http.py)
 ```python
 """
 Entry point for HTTP request triggers that is called when requests hit custom endpoint.
@@ -306,13 +362,45 @@ def process_request(influxdb3_local, query_parameters, request_headers, request_
     }
 ```
 
+3.2 Create a HTTP trigger that responds to HTTP requests such as a webhook.
+
+Arguments:
+- `--trigger-spec`: Specifies the API endpoint path for the HTTP request (e.g. request:hello => api/v3/engine/hello).
+- `--plugin-filename`: Name of the Python plugin file.
+- `--database`: Database to use.
+- '--token': YOUR_TOKEN_STRING
+- `NAME_OF_TRIGGER`
+  
+```shell
+# Create a trigger that responds to HTTP requests
+influxdb3 create trigger \
+  --trigger-spec "request:hello" \
+  --plugin-filename "hello-http.py" \
+  --database my_awesome_db \
+  --token YOUR_TOKEN_STRING \
+  hello_http_trigger
+```
+
 3.3 Test the HTTP Request plugin
 
-Send a GET or POST request to your custom endpoint such as http://localhost:8181/api/v3/engine/webhook
+Send a GET or POST request to your custom endpoint such as http://localhost:8181/api/v3/engine/webhook to see a JSON response back from the plugin.
+
+Example POST Request
 ```shell
-curl http://localhost:8181/api/v3/engine/webhook -X POST -H "Content-Type: application/json" -d '{"message": "Hello from webhook!"}'
+ curl http://localhost:8181/api/v3/engine/hello \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_STRING" \
+  -d '{"message": "Hello from webhook!"}'
 ```
-You should see logs in the InfluxDB server output, and the hello-http.py plugin will process the request and return a JSON response.
+Run the followign SQL query to confirm, plugin wrote data to the new table `api_requests`.
+
+```shell
+influxdb3 query \
+  --database my_awesome_db \
+  --token YOUR_TOKEN_STRING \
+  "SELECT * FROM api_requests ORDER BY time DESC LIMIT 10"
+```
 
 ### Extending Plugin with APIs
 
