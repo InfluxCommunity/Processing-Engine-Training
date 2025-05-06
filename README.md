@@ -337,6 +337,7 @@ You can create custom endpoint to respond to HTTP Requests coming from the web. 
 
 3.1 Create a plugin to handle HTTP requests. [Sample file](hello-http.py)
 ```python
+import datetime
 """
 Entry point for HTTP request triggers that is called when requests hit custom endpoint.
 Arguments: influxdb3_local (API), query_parameters, request_headers, request_body, args (optional).
@@ -355,10 +356,10 @@ def process_request(influxdb3_local, query_parameters, request_headers, request_
     line.int64_field("received", 1)
     influxdb3_local.write(line)
     
-    # Return a response (automatically converted to JSON)
+    # Return a response with timezone-aware UTC timestamp
     return {
         "message": "Hello from InfluxDB 3 Processing Engine!",
-        "timestamp": influxdb3_local.query("SELECT now()")[0]["now"]
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
     }
 ```
 
