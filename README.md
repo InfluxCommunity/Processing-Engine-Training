@@ -105,7 +105,7 @@ Arguments:
 influxdb3 serve \
   --node-id node0 \
   --object-store file \
-  --data-dir ~/.influxdb/data
+  --data-dir ~/.influxdb/data \
   --plugin-dir ~/influxdb3-plugins
 ```
 Upon running hte command, InfluxDB 3 should start on localhost:8181 (default) and start printing logs in the terminal window without any error.
